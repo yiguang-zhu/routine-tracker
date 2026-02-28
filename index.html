@@ -1,0 +1,634 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Routine Tracker</title>
+  <style>
+    :root { --bg:#0b0c10; --card:#12141b; --muted:#a7b0c0; --text:#e9eef7; --line:#232634; --good:#79ffa8; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; background:var(--bg); color:var(--text); }
+    header { position: sticky; top: 0; background: rgba(11,12,16,.9); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 16px; }
+    .tabs { display:flex; gap:8px; flex-wrap: wrap; }
+    .tabbtn { border:1px solid var(--line); background:transparent; color:var(--text); padding:8px 10px; border-radius:10px; cursor:pointer; }
+    .tabbtn.active { background: var(--card); border-color: #3a3f55; }
+    .grid { display:grid; gap:12px; }
+    .card { background: var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; }
+    h1 { font-size: 18px; margin: 0 0 10px 0; }
+    h2 { font-size: 14px; margin: 0 0 10px 0; color: var(--muted); font-weight: 600; }
+    input, select { background:#0f1118; color:var(--text); border:1px solid var(--line); border-radius:10px; padding:10px; width:100%; }
+    .row { display:flex; gap:10px; flex-wrap: wrap; align-items: center; }
+    .row > * { flex: 1; }
+    .btn { border:1px solid var(--line); background:#0f1118; color:var(--text); padding:10px 12px; border-radius:12px; cursor:pointer; }
+    .btn.primary { background:#1a1f2d; border-color:#3a3f55; }
+    .btn.danger { background:#2a1216; border-color:#5b2b33; }
+    .btn.ghost { background:transparent; }
+    .muted { color: var(--muted); font-size: 12px; }
+    .pill { display:inline-flex; gap:8px; align-items:center; padding:6px 10px; border-radius:999px; border:1px solid var(--line); background:#0f1118; font-size:12px; color:var(--muted); }
+    .ok { color: var(--good); }
+    table { width:100%; border-collapse: collapse; }
+    th, td { border-bottom: 1px solid var(--line); padding: 10px 8px; text-align:left; font-size: 13px; }
+    th { color: var(--muted); font-weight: 600; }
+    .biglist { display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:10px; }
+    .bigbtn { text-align:left; padding:14px; border-radius:14px; border:1px solid var(--line); background:#0f1118; cursor:pointer; }
+    .bigbtn:hover { border-color:#3a3f55; }
+    .bigbtn .title { font-size: 14px; font-weight: 650; margin-bottom: 4px; }
+    .bigbtn .meta { font-size: 12px; color: var(--muted); }
+    .two { display:grid; grid-template-columns: 1.2fr .8fr; gap:12px; }
+    @media (max-width: 900px) { .two { grid-template-columns: 1fr; } }
+    .hidden { display:none; }
+    .small { font-size: 12px; }
+    code { background:#0f1118; padding:2px 6px; border-radius:6px; border:1px solid var(--line); }
+  </style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="row" style="align-items:flex-end;">
+      <div style="flex:2;">
+        <h1>Routine Tracker</h1>
+        <div class="muted">One-tap logging • Weekly/Monthly/Yearly stats • Local-only by default</div>
+      </div>
+      <div style="flex:1; display:flex; justify-content:flex-end; gap:8px;">
+        <span class="pill" id="storagePill">Storage: Local</span>
+      </div>
+    </div>
+    <div class="tabs" style="margin-top:12px;">
+      <button class="tabbtn active" data-tab="log">Log</button>
+      <button class="tabbtn" data-tab="stats">Stats</button>
+      <button class="tabbtn" data-tab="routines">Routines</button>
+      <button class="tabbtn" data-tab="data">Data</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap grid" style="padding-top:14px;">
+  <!-- LOG TAB -->
+  <section id="tab-log" class="grid">
+    <div class="card">
+      <h2>One-tap logging</h2>
+      <div class="muted" style="margin-bottom:10px;">Click a routine to log “done now”.</div>
+      <div class="biglist" id="logButtons"></div>
+      <div class="row" style="margin-top:12px;">
+        <button class="btn ghost" id="undoBtn" title="Undo your most recent log">Undo last log</button>
+        <div class="muted" id="undoHint" style="flex:2;"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Recent logs</h2>
+      <div class="muted" style="margin-bottom:10px;">Last 15 entries.</div>
+      <table>
+        <thead><tr><th>Time</th><th>Routine</th></tr></thead>
+        <tbody id="recentLogs"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- STATS TAB -->
+  <section id="tab-stats" class="grid hidden">
+    <div class="card">
+      <h2>Overview</h2>
+      <div class="muted" style="margin-bottom:10px;">Counts are for the current ISO week (Mon–Sun), current month, and current year.</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Routine</th>
+            <th>Days since last</th>
+            <th>This week</th>
+            <th>This month</th>
+            <th>This year</th>
+            <th>All-time</th>
+            <th>Last done</th>
+          </tr>
+        </thead>
+        <tbody id="overviewTable"></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>Trend (per routine)</h2>
+      <div class="row" style="margin-bottom:10px;">
+        <div>
+          <div class="muted small">Routine</div>
+          <select id="trendRoutine"></select>
+        </div>
+        <div>
+          <div class="muted small">Group by</div>
+          <select id="trendGroup">
+            <option value="week">Week</option>
+            <option value="month" selected>Month</option>
+            <option value="year">Year</option>
+          </select>
+        </div>
+        <div>
+          <div class="muted small">How many periods</div>
+          <input id="trendPeriods" type="number" min="3" max="200" value="18" />
+        </div>
+        <div style="display:flex; align-items:flex-end;">
+          <button class="btn primary" id="trendRefresh">Refresh</button>
+        </div>
+      </div>
+      <table>
+        <thead><tr><th>Period</th><th>Count</th></tr></thead>
+        <tbody id="trendTable"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ROUTINES TAB -->
+  <section id="tab-routines" class="grid hidden">
+    <div class="card">
+      <h2>Create routines</h2>
+      <div class="row">
+        <input id="newRoutineName" placeholder="e.g., Laundry / 拖地 / 去学校 / 写小文章" />
+        <button class="btn primary" id="addRoutineBtn">Add</button>
+      </div>
+      <div class="muted" style="margin-top:8px;">Tip: You can mix English + 中文 in routine names.</div>
+    </div>
+
+    <div class="card">
+      <h2>Manage routines</h2>
+      <table>
+        <thead><tr><th>Name</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="routineTable"></tbody>
+      </table>
+      <div class="muted" style="margin-top:8px;">Archiving hides a routine from logging/stats but keeps old logs.</div>
+    </div>
+  </section>
+
+  <!-- DATA TAB -->
+  <section id="tab-data" class="grid hidden">
+    <div class="card">
+      <h2>Export</h2>
+      <div class="row">
+        <button class="btn primary" id="exportCsvBtn">Export logs (CSV)</button>
+        <button class="btn" id="exportJsonBtn">Backup (JSON)</button>
+      </div>
+      <div class="muted" style="margin-top:8px;">
+        If you ever clear “cookies and site data”, your local data may be deleted. Keep occasional backups.
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Restore (optional)</h2>
+      <div class="row">
+        <input type="file" id="importJsonFile" accept="application/json" />
+        <button class="btn danger" id="importJsonBtn">Import JSON (overwrites)</button>
+      </div>
+      <div class="muted" style="margin-top:8px;">Import replaces all current data in this browser for this site.</div>
+    </div>
+
+    <div class="card">
+      <h2>Reset</h2>
+      <div class="row">
+        <button class="btn danger" id="resetBtn">Delete all data (this site)</button>
+        <div class="muted">This cannot be undone (unless you have a backup).</div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+/** ---------- Data model ---------- **/
+const STORAGE_KEY = "routine_tracker_v1";
+function uid() { return Math.random().toString(16).slice(2) + Date.now().toString(16); }
+
+function loadData() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return seedData();
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return seedData();
+    if (!parsed.routines) parsed.routines = [];
+    if (!parsed.logs) parsed.logs = [];
+    return parsed;
+  } catch {
+    return seedData();
+  }
+}
+
+function saveData() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function seedData() {
+  const now = Date.now();
+  const defaults = ["Laundry","拖地","刷厕所","去学校","Grocery","写小文章","Dine out","Food delivery"];
+  const routines = defaults.map(name => ({ id: uid(), name, createdAt: now, archived: false }));
+  const data = { version: 1, routines, logs: [], lastLogId: null };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  return data;
+}
+
+let state = loadData();
+
+/** ---------- Date helpers ---------- **/
+function pad2(n){ return n.toString().padStart(2,"0"); }
+function toISO(dt){
+  const d = new Date(dt);
+  return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+function startOfDay(d){
+  const x = new Date(d); x.setHours(0,0,0,0); return x;
+}
+function daysBetween(a,b){
+  const ms = 24*60*60*1000;
+  return Math.floor((startOfDay(a) - startOfDay(b)) / ms);
+}
+
+// ISO week (Mon-Sun), returns {weekYear, week}
+function isoWeekInfo(date){
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  // Thursday in current week decides the year.
+  const day = d.getUTCDay() || 7; // Sun=7
+  d.setUTCDate(d.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+  const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  return { weekYear: d.getUTCFullYear(), week: weekNo };
+}
+function weekKey(date){
+  const {weekYear, week} = isoWeekInfo(date);
+  return `${weekYear}-W${pad2(week)}`;
+}
+function monthKey(date){
+  return `${date.getFullYear()}-${pad2(date.getMonth()+1)}`;
+}
+function yearKey(date){
+  return `${date.getFullYear()}`;
+}
+
+/** ---------- UI ---------- **/
+const els = {
+  tabButtons: document.querySelectorAll(".tabbtn"),
+  tabs: {
+    log: document.getElementById("tab-log"),
+    stats: document.getElementById("tab-stats"),
+    routines: document.getElementById("tab-routines"),
+    data: document.getElementById("tab-data"),
+  },
+  logButtons: document.getElementById("logButtons"),
+  recentLogs: document.getElementById("recentLogs"),
+  undoBtn: document.getElementById("undoBtn"),
+  undoHint: document.getElementById("undoHint"),
+
+  overviewTable: document.getElementById("overviewTable"),
+  trendRoutine: document.getElementById("trendRoutine"),
+  trendGroup: document.getElementById("trendGroup"),
+  trendPeriods: document.getElementById("trendPeriods"),
+  trendRefresh: document.getElementById("trendRefresh"),
+  trendTable: document.getElementById("trendTable"),
+
+  newRoutineName: document.getElementById("newRoutineName"),
+  addRoutineBtn: document.getElementById("addRoutineBtn"),
+  routineTable: document.getElementById("routineTable"),
+
+  exportCsvBtn: document.getElementById("exportCsvBtn"),
+  exportJsonBtn: document.getElementById("exportJsonBtn"),
+  importJsonFile: document.getElementById("importJsonFile"),
+  importJsonBtn: document.getElementById("importJsonBtn"),
+  resetBtn: document.getElementById("resetBtn"),
+};
+
+function setActiveTab(name){
+  for (const btn of els.tabButtons) {
+    btn.classList.toggle("active", btn.dataset.tab === name);
+  }
+  for (const [k, sec] of Object.entries(els.tabs)) {
+    sec.classList.toggle("hidden", k !== name);
+  }
+  if (name === "log") renderLog();
+  if (name === "stats") renderStats();
+  if (name === "routines") renderRoutines();
+}
+
+els.tabButtons.forEach(b => b.addEventListener("click", () => setActiveTab(b.dataset.tab)));
+
+function activeRoutines(){
+  return state.routines.filter(r => !r.archived).sort((a,b)=>a.name.localeCompare(b.name));
+}
+function routineById(id){
+  return state.routines.find(r => r.id === id);
+}
+
+function logNow(routineId){
+  const entry = { id: uid(), routineId, ts: Date.now() };
+  state.logs.push(entry);
+  state.lastLogId = entry.id;
+  saveData();
+  renderLog();
+}
+
+function undoLastLog(){
+  if (!state.lastLogId) return;
+  const idx = state.logs.findIndex(l => l.id === state.lastLogId);
+  if (idx >= 0) state.logs.splice(idx, 1);
+  state.lastLogId = null;
+  saveData();
+  renderLog();
+}
+
+function renderLog(){
+  // Buttons
+  const routines = activeRoutines();
+  els.logButtons.innerHTML = "";
+  if (routines.length === 0) {
+    els.logButtons.innerHTML = `<div class="muted">No active routines. Add one in the Routines tab.</div>`;
+  } else {
+    for (const r of routines) {
+      const last = lastLogForRoutine(r.id);
+      const lastText = last ? `${toISO(last.ts)}` : "Never";
+      const btn = document.createElement("button");
+      btn.className = "bigbtn";
+      btn.innerHTML = `<div class="title">${escapeHtml(r.name)}</div>
+                       <div class="meta">Last: ${escapeHtml(lastText)}</div>`;
+      btn.addEventListener("click", () => logNow(r.id));
+      els.logButtons.appendChild(btn);
+    }
+  }
+
+  // Undo hint
+  if (state.lastLogId) {
+    const last = state.logs.find(l => l.id === state.lastLogId);
+    const r = last ? routineById(last.routineId) : null;
+    els.undoHint.textContent = last && r ? `Last log: ${r.name} at ${toISO(last.ts)}.` : "";
+  } else {
+    els.undoHint.textContent = "No recent log to undo.";
+  }
+
+  // Recent logs
+  const recent = [...state.logs].sort((a,b)=>b.ts-a.ts).slice(0,15);
+  els.recentLogs.innerHTML = recent.map(l => {
+    const r = routineById(l.routineId);
+    return `<tr><td>${escapeHtml(toISO(l.ts))}</td><td>${escapeHtml(r ? r.name : "(deleted routine)")}</td></tr>`;
+  }).join("") || `<tr><td colspan="2" class="muted">No logs yet.</td></tr>`;
+}
+
+els.undoBtn.addEventListener("click", undoLastLog);
+
+/** ---------- Stats ---------- **/
+function lastLogForRoutine(routineId){
+  let best = null;
+  for (const l of state.logs) {
+    if (l.routineId !== routineId) continue;
+    if (!best || l.ts > best.ts) best = l;
+  }
+  return best;
+}
+
+function countsForRoutine(routineId){
+  const now = new Date();
+  const wk = weekKey(now);
+  const mk = monthKey(now);
+  const yk = yearKey(now);
+
+  let weekCount = 0, monthCount = 0, yearCount = 0, all = 0;
+  for (const l of state.logs) {
+    if (l.routineId !== routineId) continue;
+    all++;
+    const d = new Date(l.ts);
+    if (weekKey(d) === wk) weekCount++;
+    if (monthKey(d) === mk) monthCount++;
+    if (yearKey(d) === yk) yearCount++;
+  }
+  return { weekCount, monthCount, yearCount, all };
+}
+
+function renderStats(){
+  const routines = activeRoutines();
+
+  // Overview
+  els.overviewTable.innerHTML = "";
+  if (routines.length === 0) {
+    els.overviewTable.innerHTML = `<tr><td colspan="7" class="muted">No active routines.</td></tr>`;
+  } else {
+    const now = new Date();
+    for (const r of routines) {
+      const last = lastLogForRoutine(r.id);
+      const ds = last ? daysBetween(now, new Date(last.ts)) : null;
+      const c = countsForRoutine(r.id);
+      els.overviewTable.innerHTML += `
+        <tr>
+          <td>${escapeHtml(r.name)}</td>
+          <td>${ds === null ? "<span class='muted'>—</span>" : `<span class="${ds===0?'ok':''}">${ds}</span>`}</td>
+          <td>${c.weekCount}</td>
+          <td>${c.monthCount}</td>
+          <td>${c.yearCount}</td>
+          <td>${c.all}</td>
+          <td class="muted">${last ? escapeHtml(toISO(last.ts)) : "Never"}</td>
+        </tr>`;
+    }
+  }
+
+  // Trend selectors
+  els.trendRoutine.innerHTML = routines.map(r => `<option value="${r.id}">${escapeHtml(r.name)}</option>`).join("");
+  renderTrend();
+}
+
+function renderTrend(){
+  const routineId = els.trendRoutine.value || (activeRoutines()[0]?.id);
+  if (!routineId) {
+    els.trendTable.innerHTML = `<tr><td colspan="2" class="muted">No routines.</td></tr>`;
+    return;
+  }
+  const group = els.trendGroup.value; // week/month/year
+  const periods = Math.max(3, Math.min(200, Number(els.trendPeriods.value || 18)));
+
+  // aggregate counts
+  const map = new Map();
+  for (const l of state.logs) {
+    if (l.routineId !== routineId) continue;
+    const d = new Date(l.ts);
+    const key = group === "week" ? weekKey(d) : group === "month" ? monthKey(d) : yearKey(d);
+    map.set(key, (map.get(key) || 0) + 1);
+  }
+
+  // build last N period keys ending at now
+  const now = new Date();
+  const keys = [];
+  if (group === "year") {
+    let y = now.getFullYear();
+    for (let i=0;i<periods;i++) keys.push(String(y - i));
+  } else if (group === "month") {
+    let y = now.getFullYear(), m = now.getMonth(); // 0-based
+    for (let i=0;i<periods;i++){
+      const d = new Date(y, m, 1);
+      keys.push(monthKey(d));
+      m--;
+      if (m < 0) { m = 11; y--; }
+    }
+  } else { // week
+    // step back by 7 days
+    let d = new Date(now);
+    for (let i=0;i<periods;i++){
+      keys.push(weekKey(d));
+      d = new Date(d.getTime() - 7*24*60*60*1000);
+    }
+  }
+
+  // render newest first
+  els.trendTable.innerHTML = keys.map(k => {
+    const v = map.get(k) || 0;
+    return `<tr><td>${escapeHtml(k)}</td><td>${v}</td></tr>`;
+  }).join("");
+}
+
+els.trendRefresh.addEventListener("click", renderTrend);
+els.trendRoutine.addEventListener("change", renderTrend);
+els.trendGroup.addEventListener("change", renderTrend);
+
+/** ---------- Routines ---------- **/
+function addRoutine(name){
+  const clean = name.trim();
+  if (!clean) return;
+  state.routines.push({ id: uid(), name: clean, createdAt: Date.now(), archived:false });
+  saveData();
+  els.newRoutineName.value = "";
+  renderRoutines();
+  renderLog();
+}
+
+els.addRoutineBtn.addEventListener("click", () => addRoutine(els.newRoutineName.value));
+els.newRoutineName.addEventListener("keydown", (e)=>{ if (e.key==="Enter") addRoutine(els.newRoutineName.value); });
+
+function renderRoutines(){
+  const routines = [...state.routines].sort((a,b)=>a.name.localeCompare(b.name));
+  els.routineTable.innerHTML = routines.map(r => `
+    <tr>
+      <td>
+        <input data-edit="${r.id}" value="${escapeAttr(r.name)}" />
+      </td>
+      <td>${r.archived ? "<span class='muted'>Archived</span>" : "<span class='ok'>Active</span>"}</td>
+      <td>
+        <button class="btn" data-toggle="${r.id}">${r.archived ? "Unarchive" : "Archive"}</button>
+        <button class="btn danger" data-delete="${r.id}">Delete</button>
+      </td>
+    </tr>
+  `).join("") || `<tr><td colspan="3" class="muted">No routines.</td></tr>`;
+
+  // wire actions
+  els.routineTable.querySelectorAll("[data-toggle]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const id = btn.getAttribute("data-toggle");
+      const r = routineById(id);
+      if (!r) return;
+      r.archived = !r.archived;
+      saveData();
+      renderRoutines();
+    });
+  });
+
+  els.routineTable.querySelectorAll("[data-delete]").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const id = btn.getAttribute("data-delete");
+      const r = routineById(id);
+      if (!r) return;
+      const ok = confirm(`Delete routine "${r.name}"?\n\nThis will NOT delete old logs (they’ll show as deleted routine).`);
+      if (!ok) return;
+      state.routines = state.routines.filter(x => x.id !== id);
+      saveData();
+      renderRoutines();
+      renderLog();
+      renderStats();
+    });
+  });
+
+  els.routineTable.querySelectorAll("input[data-edit]").forEach(inp=>{
+    inp.addEventListener("change", ()=>{
+      const id = inp.getAttribute("data-edit");
+      const r = routineById(id);
+      if (!r) return;
+      r.name = inp.value.trim() || r.name;
+      saveData();
+      renderRoutines();
+      renderLog();
+      renderStats();
+    });
+  });
+}
+
+/** ---------- Export / Import ---------- **/
+function download(filename, content, mime){
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function exportCsv(){
+  const routineMap = new Map(state.routines.map(r => [r.id, r.name]));
+  const rows = [["timestamp_iso","routine_name","routine_id"]];
+  const sorted = [...state.logs].sort((a,b)=>a.ts-b.ts);
+  for (const l of sorted) {
+    const name = routineMap.get(l.routineId) || "(deleted routine)";
+    rows.push([new Date(l.ts).toISOString(), name, l.routineId]);
+  }
+  const csv = rows.map(r => r.map(csvEscape).join(",")).join("\n");
+  download(`routine-logs-${new Date().toISOString().slice(0,10)}.csv`, csv, "text/csv;charset=utf-8");
+}
+
+function exportJson(){
+  download(`routine-backup-${new Date().toISOString().slice(0,10)}.json`,
+           JSON.stringify(state, null, 2),
+           "application/json;charset=utf-8");
+}
+
+function importJson(file){
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const parsed = JSON.parse(reader.result);
+      if (!parsed || typeof parsed !== "object") throw new Error("Invalid JSON");
+      if (!Array.isArray(parsed.routines) || !Array.isArray(parsed.logs)) throw new Error("Missing routines/logs arrays");
+      state = parsed;
+      saveData();
+      renderLog(); renderStats(); renderRoutines();
+      alert("Import complete.");
+    } catch (e) {
+      alert("Import failed: " + (e.message || String(e)));
+    }
+  };
+  reader.readAsText(file);
+}
+
+els.exportCsvBtn.addEventListener("click", exportCsv);
+els.exportJsonBtn.addEventListener("click", exportJson);
+els.importJsonBtn.addEventListener("click", ()=>{
+  const f = els.importJsonFile.files?.[0];
+  if (!f) return alert("Choose a JSON file first.");
+  const ok = confirm("Import will OVERWRITE your current data for this site in this browser. Continue?");
+  if (!ok) return;
+  importJson(f);
+});
+
+els.resetBtn.addEventListener("click", ()=>{
+  const ok = confirm("Delete ALL routines and logs for this site in this browser? This cannot be undone.");
+  if (!ok) return;
+  localStorage.removeItem(STORAGE_KEY);
+  state = seedData();
+  renderLog(); renderStats(); renderRoutines();
+});
+
+/** ---------- Safety: tiny escaping helpers ---------- **/
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function escapeAttr(s){ return escapeHtml(s).replace(/"/g, "&quot;"); }
+function csvEscape(s){
+  const x = String(s ?? "");
+  if (/[,"\n]/.test(x)) return `"${x.replace(/"/g,'""')}"`;
+  return x;
+}
+
+/** ---------- Init ---------- **/
+renderLog();
+renderRoutines();
+</script>
+</body>
+</html>
