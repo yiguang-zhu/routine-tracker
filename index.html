@@ -145,7 +145,7 @@
     <div class="card">
       <h2>Create routines</h2>
       <div class="row">
-        <input id="newRoutineName" placeholder="e.g., Laundry / 拖地 / 去学校 / 写小文章" />
+        <input id="newRoutineName" placeholder="e.g., Laundry / Grocery / 拖地" />
         <button class="btn primary" id="addRoutineBtn">Add</button>
       </div>
       <div class="muted" style="margin-top:8px;">Tip: You can mix English + 中文 in routine names.</div>
@@ -218,7 +218,7 @@ function saveData() {
 
 function seedData() {
   const now = Date.now();
-  const defaults = ["Laundry","拖地","刷厕所","去学校","Grocery","写小文章","Dine out","Food delivery"];
+  const defaults = ["Laundry","拖地","Bathroom Cleaning","Commute to Baltimore","Grocery","网站更新","Dine out","Food delivery"];
   const routines = defaults.map(name => ({ id: uid(), name, createdAt: now, archived: false }));
   const data = { version: 1, routines, logs: [], lastLogId: null };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
