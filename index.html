@@ -83,7 +83,7 @@
       <h2>Recent logs</h2>
       <div class="muted" style="margin-bottom:10px;">Last 15 entries.</div>
       <table>
-        <thead><tr><th>Time</th><th>Routine</th></tr></thead>
+        <thead><tr><th>Date</th><th>Routine</th><th>Edit date</th></tr></thead>
         <tbody id="recentLogs"></tbody>
       </table>
     </div>
@@ -229,9 +229,14 @@ let state = loadData();
 
 /** ---------- Date helpers ---------- **/
 function pad2(n){ return n.toString().padStart(2,"0"); }
-function toISO(dt){
+function formatDisplayDate(dt){
   const d = new Date(dt);
-  return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  return `${pad2(d.getMonth()+1)}/${pad2(d.getDate())}/${d.getFullYear()}`;
+}
+
+function toDateInputValue(dt){
+  const d = new Date(dt);
+  return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
 }
 function startOfDay(d){
   const x = new Date(d); x.setHours(0,0,0,0); return x;
@@ -332,6 +337,28 @@ function undoLastLog(){
   renderLog();
 }
 
+  function updateLogDate(logId, yyyyMmDd){
+  const log = state.logs.find(l => l.id === logId);
+  if (!log || !yyyyMmDd) return;
+
+  const [y, m, d] = yyyyMmDd.split("-").map(Number);
+  const old = new Date(log.ts);
+
+  const updated = new Date(
+    y,
+    m - 1,
+    d,
+    old.getHours(),
+    old.getMinutes(),
+    old.getSeconds(),
+    old.getMilliseconds()
+  );
+
+  log.ts = updated.getTime();
+  saveData();
+  renderLog();
+}
+
 function renderLog(){
   // Buttons
   const routines = activeRoutines();
@@ -341,7 +368,7 @@ function renderLog(){
   } else {
     for (const r of routines) {
       const last = lastLogForRoutine(r.id);
-      const lastText = last ? `${toISO(last.ts)}` : "Never";
+      const lastText = last ? `${formatDisplayDate(last.ts)}` : "Never";
       const btn = document.createElement("button");
       btn.className = "bigbtn";
       btn.innerHTML = `<div class="title">${escapeHtml(r.name)}</div>
@@ -355,7 +382,7 @@ function renderLog(){
   if (state.lastLogId) {
     const last = state.logs.find(l => l.id === state.lastLogId);
     const r = last ? routineById(last.routineId) : null;
-    els.undoHint.textContent = last && r ? `Last log: ${r.name} at ${toISO(last.ts)}.` : "";
+    els.undoHint.textContent = last && r ? `Last log: ${r.name} on ${formatDisplayDate(last.ts)}.` : "";
   } else {
     els.undoHint.textContent = "No recent log to undo.";
   }
@@ -363,9 +390,23 @@ function renderLog(){
   // Recent logs
   const recent = [...state.logs].sort((a,b)=>b.ts-a.ts).slice(0,15);
   els.recentLogs.innerHTML = recent.map(l => {
-    const r = routineById(l.routineId);
-    return `<tr><td>${escapeHtml(toISO(l.ts))}</td><td>${escapeHtml(r ? r.name : "(deleted routine)")}</td></tr>`;
-  }).join("") || `<tr><td colspan="2" class="muted">No logs yet.</td></tr>`;
+  const r = routineById(l.routineId);
+  return `
+    <tr>
+      <td>${escapeHtml(formatDisplayDate(l.ts))}</td>
+      <td>${escapeHtml(r ? r.name : "(deleted routine)")}</td>
+      <td>
+        <input type="date" data-log-date="${l.id}" value="${toDateInputValue(l.ts)}" />
+      </td>
+    </tr>
+  `;
+}).join("") || `<tr><td colspan="3" class="muted">No logs yet.</td></tr>`;
+
+els.recentLogs.querySelectorAll("input[data-log-date]").forEach(inp => {
+  inp.addEventListener("change", () => {
+    updateLogDate(inp.getAttribute("data-log-date"), inp.value);
+  });
+});
 }
 
 els.undoBtn.addEventListener("click", undoLastLog);
@@ -419,7 +460,7 @@ function renderStats(){
           <td>${c.monthCount}</td>
           <td>${c.yearCount}</td>
           <td>${c.all}</td>
-          <td class="muted">${last ? escapeHtml(toISO(last.ts)) : "Never"}</td>
+          <td class="muted">${last ? escapeHtml(formatDisplayDate(last.ts)) : "Never"}</td>
         </tr>`;
     }
   }
