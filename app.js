@@ -5,7 +5,65 @@ const modalRoot = document.getElementById('modalRoot');
 const toastRoot = document.getElementById('toastRoot');
 const importFile = document.getElementById('importFile');
 const nav = document.getElementById('bottomNav');
-const icons = ['🧺','🛒','🍽️','🧹','🏸','🏃','📚','💻','📝','🧘','🪴','🚗','💊','☕','🎬','🛁'];
+// Curated, searchable icon sets. User can also type or paste any emoji.
+const ICON_GROUPS = [
+  {id:'common',name:'常用',icons:[
+    ['🧺','洗衣 Laundry'],['🛒','购物 Grocery'],['🍽️','外食 Dine out'],['🧹','打扫 Cleaning'],
+    ['🏸','羽毛球 Badminton'],['🏋️','健身 Gym'],['🏃','跑步 Running'],['📚','读书 Reading'],
+    ['💻','网站电脑 Website'],['📝','写作 Writing'],['🧘','冥想 Yoga'],['🚗','开车 Commute'],
+    ['☕','咖啡 Coffee'],['🍳','做饭 Cooking'],['🪴','植物 Plants'],['🎬','电影 Movie'],
+    ['🚽','厕所 Bathroom'],['💆','按摩 Massage'],['✈️','旅行 Travel'],['📅','日程 Calendar']
+  ]},
+  {id:'home',name:'家务',icons:[
+    ['🧺','洗衣 Laundry'],['🧹','扫地 Cleaning'],['🧽','擦拭 Scrubbing'],['🪣','拖地 Mopping'],
+    ['🚽','厕所 Bathroom'],['🛁','泡澡 Bath'],['🚿','淋浴 Shower'],['🧼','肥皂 Soap'],
+    ['🧴','清洁用品 Lotion'],['🛏️','床 Bed'],['🪟','窗户 Window'],['🪴','植物 Plants'],
+    ['🪑','家具 Chair'],['🛋️','沙发 Sofa'],['🔧','维修 Repair'],['🧰','工具 Tools'],
+    ['🧻','纸巾 Tissue'],['🪥','刷牙 Teeth'],['👕','衣服 Clothes'],['🧦','袜子 Socks'],
+    ['🧥','外套 Jacket'],['💡','灯 Light'],['🗑️','垃圾 Trash'],['🧵','针线 Sewing']
+  ]},
+  {id:'food',name:'饮食',icons:[
+    ['🛒','购物 Grocery'],['🥦','蔬菜 Vegetables'],['🍎','水果 Fruit'],['🍽️','外食 Dine out'],
+    ['🍳','做饭 Cooking'],['🥗','沙拉 Salad'],['🍜','面 Noodles'],['🍣','寿司 Sushi'],
+    ['🍕','披萨 Pizza'],['🍔','汉堡 Burger'],['🥡','外卖 Takeout'],['🍱','便当 Bento'],
+    ['🍰','甜点 Dessert'],['🥐','早餐 Brunch'],['🧋','奶茶 Bubble tea'],['☕','咖啡 Coffee'],
+    ['🍵','茶 Tea'],['🍷','红酒 Wine'],['🥛','牛奶 Milk'],['🧃','饮料 Juice'],
+    ['🥣','早餐 Breakfast'],['🥩','牛排 Steak'],['🍞','烘焙 Bread'],['🧀','奶酪 Cheese']
+  ]},
+  {id:'health',name:'运动健康',icons:[
+    ['🏸','羽毛球 Badminton'],['🏃','跑步 Running'],['🏋️','力量 Gym'],['🚴','骑行 Cycling'],
+    ['🏊','游泳 Swim'],['🧗','攀岩 Climbing'],['🏓','乒乓球 Ping pong'],['🏀','篮球 Basketball'],
+    ['⚽','足球 Soccer'],['🥾','徒步 Hiking'],['🧘','瑜伽 Yoga'],['💪','锻炼 Strength'],
+    ['🚶','散步 Walk'],['🏞️','公园 Park'],['🌲','户外 Nature'],['🛶','划船 Kayaking'],
+    ['💊','药物 Medicine'],['🏥','医院 Hospital'],['🩺','医生 Doctor'],['🦷','牙医 Dentist'],
+    ['😴','睡眠 Sleep'],['🧠','心理 Mind'],['🛌','休息 Rest'],['💆','按摩 Massage']
+  ]},
+  {id:'work',name:'工作学习',icons:[
+    ['📚','书籍 Books'],['📖','阅读 Reading'],['📝','笔记 Notes'],['✍️','写作 Writing'],
+    ['💻','电脑 Computer'],['🖥️','显示器 Desktop'],['⌨️','打字 Typing'],['📊','统计 Data'],
+    ['🗓️','计划 Schedule'],['📅','日历 Calendar'],['💼','上班 Work'],['🗂️','文件 Documents'],
+    ['📁','文件夹 Folder'],['📧','邮件 Email'],['📞','电话 Call'],['🧪','实验 Experiment'],
+    ['🔬','科研 Research'],['🧫','培养皿 Lab'],['🎓','学位 Education'],['🏛️','机构 Office']
+  ]},
+  {id:'leisure',name:'休闲生活',icons:[
+    ['🎬','电影 Movie'],['🎨','艺术 Art'],['🎵','音乐 Music'],['🎧','听歌 Headphones'],
+    ['🎹','钢琴 Piano'],['🎮','游戏 Gaming'],['🎲','桌游 Games'],['🎤','唱歌 Singing'],
+    ['🎭','表演 Theater'],['📸','拍照 Photography'],['📷','相机 Camera'],['🎟️','活动 Event'],
+    ['🧩','拼图 Puzzle'],['📺','电视 TV'],['🏖️','度假 Beach'],['📱','手机 Phone'],
+    ['🐈','猫 Cat'],['🐕','狗 Dog'],['💬','聊天 Chat'],['🎁','礼物 Gift'],
+    ['🛍️','逛街 Shopping'],['💇','理发 Haircut']
+  ]},
+  {id:'travel',name:'出行其他',icons:[
+    ['🚗','汽车 Car'],['🚕','出租车 Taxi'],['🚆','火车 Train'],['🚌','公交 Bus'],
+    ['✈️','飞机 Airplane'],['🚲','自行车 Bicycle'],['🚉','地铁 Metro'],['⛽','加油 Gas'],
+    ['🚘','驾车 Driving'],['🏡','家 Home'],['🏙️','城市 City'],['🌃','夜景 Night'],
+    ['🏔️','山 Mountain'],['⛰️','登山 Summit'],['🏕️','露营 Camping'],['📍','地点 Location'],
+    ['🗺️','地图 Map'],['🧳','行李 Luggage'],['💳','支付 Card'],['💰','金钱 Money'],
+    ['🏦','银行 Bank'],['☀️','天气 Sun'],['🌙','夜晚 Moon'],['⭐','收藏 Star'],
+    ['❤️','喜欢 Love'],['✅','完成 Check']
+  ]}
+];
+const PREVIEW = window.ROUTINE_PREVIEW === true;
 const DAY = 86400000;
 let state;
 let currentPage = 'home';
@@ -35,12 +93,19 @@ function allSortedLogs() { return [...state.logs].sort((a,b)=>b.occurredAt.local
 function inLastDays(iso, days) { const n=dayDiff(dateKey(iso)); return n>=0 && n<days; }
 function periodCount(id, days) { return state.logs.filter(l=>(!id || l.activityId===id) && inLastDays(l.occurredAt, days)).length; }
 function median(values) { if(!values.length) return null; const a=[...values].sort((x,y)=>x-y); const mid=Math.floor(a.length/2); return a.length%2?a[mid]:(a[mid-1]+a[mid])/2; }
-function medianInterval(id) {
-  const days=[...new Set(entriesByActivity(id).map(l=>dateKey(l.occurredAt)))].sort();
-  if(days.length<2) return null;
-  return median(days.slice(1).map((d,i)=>dayDiff(days[i],d)));
+function frequencyDays(id) {
+  // Median time between consecutive events, including multiple events on one day.
+  const times=entriesByActivity(id).map(l=>Date.parse(l.occurredAt)).sort((a,b)=>a-b);
+  if(times.length<2) return null;
+  const gaps=times.slice(1).map((t,i)=>(t-times[i])/DAY);
+  return median(gaps);
 }
-function formatDuration(n) { return n===null ? '—' : `${Number.isInteger(n)?n:n.toFixed(1)} 天`; }
+function frequencyLabel(value) {
+  if(value===null || !Number.isFinite(value)) return '—';
+  if(value<1) return '<1 天/次';
+  const rounded=Math.round(value*10)/10;
+  return `${Number.isInteger(rounded)?rounded:rounded.toFixed(1)} 天/次`;
+}
 function emptyBlock(title, description, action='') { return `<div class="empty-state"><strong>${title}</strong><p>${description}</p>${action}</div>`; }
 function viewerBanner() {
   return isViewer() ? `<div class="view-banner">${icon('info')}<div>当前显示的是导入的<strong>只读备份</strong>（${state.meta.importedAt ? dateLong(state.meta.importedAt) : '未知时间'}导入）。手机上的新记录不会自动出现在这里。可在设置中导入更新的备份。</div></div>` : '';
@@ -68,39 +133,31 @@ function homePage() {
       ${isViewer()?'':`<button class="activity-backfill" data-action="backfill" data-id="${escAttr(a.id)}" aria-label="补记 ${escAttr(a.name)}">补记</button>`}</div></div>`;
   }).join('');
   const addCard=isViewer()?'':`<button class="activity-card activity-add" data-action="add"><span class="plus-bubble">${icon('plus')}</span><span>新增事项</span></button>`;
-  return `${viewerBanner()}<div class="page-heading"><div><p class="eyebrow">Notice your rhythm</p><h1 class="page-title">生活，慢慢记录。</h1><p class="page-subtitle">做过的事，轻点一下。无需连续打卡。</p></div></div>
-  <div class="summary-strip"><div class="stat-tile"><div class="stat-number">${periodCount(null,7)}</div><div class="stat-label">近 7 天记录</div></div><div class="stat-tile"><div class="stat-number">${periodCount(null,30)}</div><div class="stat-label">近 30 天记录</div></div><div class="stat-tile"><div class="stat-number">${n}</div><div class="stat-label">正在关注的事项</div></div></div>
+  return `${viewerBanner()}<div class="page-heading"><div><p class="eyebrow">Notice your rhythm</p><h1 class="page-title">日常记录</h1></div></div>
   ${backupBanner()}
-  <div class="section-head"><h2 class="section-title">快速记录</h2><span class="section-note">点卡片即可记录今天</span></div>
+  <div class="section-head"><h2 class="section-title">我的事项</h2><span class="section-note">轻点记录今天</span></div>
   <div class="record-toolbar"><label class="searchbox">${icon('search')}<input id="activitySearch" type="search" autocomplete="off" placeholder="查找事项…" aria-label="查找事项"></label>
    ${isViewer()?'':`<button class="button button-secondary" data-action="add">${icon('plus')} 新增</button>`}</div>
   ${n?`<div class="activity-grid" id="activityGrid">${cards}${addCard}</div>`:emptyBlock('还没有事项','先新增一件你希望观察频率的事情。',isViewer()?'':`<button class="button button-primary" data-action="add">${icon('plus')} 新增事项</button>`)}
   <div class="section-head"><h2 class="section-title">最近记录</h2><button class="text-link" data-nav="history">查看全部 ${icon('chevron-right')}</button></div>
   ${logs.length ? `<div class="surface-list">${logs.slice(0,4).map(l=>entryRow(l,false)).join('')}</div>` : emptyBlock('从第一次记录开始','这里会显示你最近记录的活动。')}
-  ${!isViewer()?`<p class="footer-note">你记录的是生活，而不是任务清单。漏记也可以随时补上。</p>`:''}`;
+  `;
 }
 function entryRow(l,editable=true) {
   const a=activityById(l.activityId);
   return `<div class="list-row"><div class="row-icon" aria-hidden="true">${iconFor(a)}</div><div class="row-text"><div class="row-title">${escapeHTML(a?.name || '未知事项')}</div><div class="row-description">${dateLong(l.occurredAt)}${dateKey(l.occurredAt)!==dateKey(l.recordedAt)?' · 补记':''}</div></div>
   ${editable && !isViewer()?`<button class="row-button" data-action="edit-log" data-id="${escAttr(l.id)}" aria-label="编辑记录">${icon('edit')}</button>`:`<div class="row-trailing">${dateShort(l.occurredAt)}</div>`}</div>`;
 }
-function weeklyBars() {
-  const now=new Date(); const monday=new Date(now.getFullYear(),now.getMonth(),now.getDate()); monday.setDate(monday.getDate()-((monday.getDay()+6)%7));
-  const weeks=[];
-  for(let i=7;i>=0;i--){const start=new Date(monday);start.setDate(start.getDate()-i*7);const end=new Date(start);end.setDate(end.getDate()+7);
-    const count=state.logs.filter(l=>{const d=new Date(l.occurredAt);return d>=start && d<end;}).length;
-    weeks.push({label:`${start.getMonth()+1}/${start.getDate()}`,count,current:i===0});}
-  const max=Math.max(1,...weeks.map(w=>w.count));
-  return `<div class="bars" role="img" aria-label="过去八周记录次数：${weeks.map(w=>w.label+' '+w.count+'次').join('，')}">${weeks.map(w=>`<div class="bar-col"><div class="bar-fill ${w.current?'current':''}" style="height:${Math.max(3,w.count/max*103)}px" title="${w.label}：${w.count} 次"></div><span class="bar-label">${w.label}</span></div>`).join('')}</div>`;
-}
 function insightsPage() {
-  const items=active().map(a=>({a,thirty:periodCount(a.id,30),seven:periodCount(a.id,7),all:entriesByActivity(a.id).length,med:medianInterval(a.id)})).sort((a,b)=>b.thirty-a.thirty||a.a.order-b.a.order);
-  return `${viewerBanner()}<div class="page-heading"><div><p class="eyebrow">Insights</p><h1 class="page-title">看见自己的节奏。</h1><p class="page-subtitle">用真实的记录理解频率，而不是追逐连续天数。</p></div></div>
-  <div class="metric-grid"><div class="metric-tile"><div class="metric-value">${periodCount(null,30)}</div><div class="metric-caption">最近 30 天 · 总记录</div></div><div class="metric-tile"><div class="metric-value">${state.logs.length}</div><div class="metric-caption">全部历史记录</div></div></div>
-  <div class="section-head"><h2 class="section-title">八周趋势</h2><span class="section-note">每周记录次数</span></div><div class="card">${weeklyBars()}</div>
-  <div class="section-head"><h2 class="section-title">各项活动</h2><span class="section-note">最近 30 天 · 由多到少</span></div>
-  ${items.length?`<div class="surface-list">${items.map(({a,thirty,seven,all,med})=>`<button class="list-row" style="width:100%;text-align:left;background:white;border-left:0;border-right:0;border-top:0;cursor:pointer" data-action="activity-detail" data-id="${escAttr(a.id)}"><span class="row-icon" aria-hidden="true">${iconFor(a)}</span><span class="row-text"><span class="row-title">${escapeHTML(a.name)}</span><span class="row-description">近 7 天 ${seven} 次 · 典型间隔 ${formatDuration(med)} · 共 ${all} 次</span></span><span class="row-trailing"><span class="row-primary">${thirty}</span><br>近 30 天</span>${icon('chevron-right')}</button>`).join('')}</div>`:emptyBlock('暂无事项','添加活动并开始记录后，这里会显示你的生活频率。')}
-  <p class="footer-note">统计基于已录入的活动。没有记录不代表没有发生。</p>`;
+  const items=active().map(a=>({a,thirty:periodCount(a.id,30),seven:periodCount(a.id,7),all:entriesByActivity(a.id).length,freq:frequencyDays(a.id),last:lastEntry(a.id)}));
+  return `${viewerBanner()}<div class="page-heading"><div><p class="eyebrow">Insights</p><h1 class="page-title">活动统计</h1></div></div>
+  <div class="insights-grid">${items.map(({a,thirty,seven,all,freq,last})=>`
+    <button class="insight-card" data-action="activity-detail" data-id="${escAttr(a.id)}" aria-label="查看${escAttr(a.name)}的记录详情">
+      <div class="insight-card-top"><span class="row-icon" aria-hidden="true">${iconFor(a)}</span><span class="insight-card-title">${escapeHTML(a.name)}<small>${last?`上次 · ${since(last.occurredAt)}`:'暂无记录'}</small></span>${icon('chevron-right')}</div>
+      <div class="insight-frequency"><span class="insight-frequency-label">频率</span><strong>${frequencyLabel(freq)}</strong></div>
+      <div class="insight-metrics"><div><strong>${seven}</strong><small>近 7 天</small></div><div><strong>${thirty}</strong><small>近 30 天</small></div><div><strong>${all}</strong><small>累计</small></div></div>
+    </button>`).join('')}</div>
+  ${items.length?'':emptyBlock('还没有统计数据','添加事项后，就能在这里查看每项活动的频率。')}`;
 }
 function historyPage() {
   const logs=allSortedLogs(); const groups=new Map();
@@ -121,7 +178,7 @@ function settingsPage() {
   <section class="setting-section"><h2>隐私与设备</h2><div class="setting-content"><div class="split-label"><strong>${icon('shield')} 无账户 · 无云端</strong></div><p>不需要登录、不上传你的记录。浏览器或 iOS 清理网站数据、删除 App 等操作可能导致记录丢失，请把备份文件保存到 iCloud Drive。</p>
   <div class="setting-button-stack"><button class="button button-danger" data-action="reset">${icon('trash')} 清除这台设备的数据</button></div></div></section>
   <section class="setting-section"><h2>安装到 iPhone</h2><div class="setting-content"><strong>像 App 一样使用</strong><p>在 Safari 中打开此网站，点「分享」→「添加到主屏幕」，开启「作为 Web App 打开」。以后从桌面图标启动。</p></div></section>
-  <p class="footer-note">Routine v2 · Built for noticing, not judging.</p>`;
+  <p class="footer-note">Routine v2.1</p>`;
 }
 function managePage() {
   return `<div class="view-heading"><button class="back-btn" data-nav="settings" aria-label="返回设置">${icon('arrow-left')}</button><h1>管理事项</h1></div>
@@ -134,10 +191,10 @@ function navigate(name) {
 }
 function render() {
   if(!state) return;
-  app.innerHTML = ({home:homePage, insights:insightsPage,history:historyPage,settings:settingsPage,manage:managePage}[currentPage] || homePage)();
+  app.innerHTML = (PREVIEW?`<div class="preview-banner"><span>预览版 2.1</span>演示数据与正式版完全分开，不影响你的记录。</div>`:'') + ({home:homePage, insights:insightsPage,history:historyPage,settings:settingsPage,manage:managePage}[currentPage] || homePage)();
   nav.querySelectorAll('[data-nav]').forEach(b=>b.classList.toggle('active',b.dataset.nav===currentPage));
   const pill=document.querySelector('.local-pill');
-  if(pill) pill.innerHTML=`<span class="local-indicator"></span>${isViewer()?'只读备份':'本地存储'}`;
+  if(pill) pill.innerHTML=`<span class="local-indicator"></span>${PREVIEW?'预览模式':isViewer()?'只读备份':'本地存储'}`;
   if (currentPage==='manage') nav.style.display='none'; else nav.style.display='';
 }
 function toast(message, action, callback) {
@@ -168,17 +225,63 @@ function openModal(title,contents,onSubmit, options={}) {
   modalRoot.querySelector('.modal-scrim').addEventListener('click',e=>{if(e.target.classList.contains('modal-scrim'))dismissModal();});
   if(options.focus) setTimeout(()=>document.getElementById(options.focus)?.focus(),90);
 }
-function emojiOptions(chosen='🧺') {return `<div class="emoji-picker" role="group" aria-label="选择图标">${icons.map((emoji,i)=>`<button class="emoji-option ${emoji===chosen?'selected':''}" type="button" data-emoji="${escAttr(emoji)}" aria-label="图标 ${i+1}" aria-pressed="${emoji===chosen}">${emoji}</button>`).join('')}</div><input type="hidden" id="emojiInput" name="emoji" value="${escAttr(chosen)}">`;}
+function emojiOptions(chosen='🧺') {
+  const categories=ICON_GROUPS.map(group=>`<button type="button" class="emoji-category ${group.id==='common'?'active':''}" data-icon-category="${group.id}" aria-pressed="${group.id==='common'}">${group.name}</button>`).join('');
+  const sections=ICON_GROUPS.map(group=>`<div class="emoji-section" data-icon-group="${group.id}"><div class="emoji-group-title">${group.name}</div><div class="emoji-grid">${group.icons.map(([emoji,keywords])=>`<button type="button" class="emoji-option ${emoji===chosen?'selected':''}" data-emoji="${escAttr(emoji)}" data-icon-search="${escAttr((keywords+' '+emoji).toLowerCase())}" aria-label="${escAttr(keywords)}" aria-pressed="${emoji===chosen}">${emoji}</button>`).join('')}</div></div>`).join('');
+  return `<div class="emoji-tool" id="emojiTool" data-category="common">
+    <div class="emoji-current"><span id="emojiSelected" aria-hidden="true">${escapeHTML(chosen)}</span><div><strong>选一个图标</strong><small>可搜索、按类别找，或自定义</small></div></div>
+    <div class="emoji-categories" aria-label="图标类别">${categories}</div>
+    <label class="emoji-search">${icon('search')}<input id="emojiSearch" type="search" placeholder="搜索图标，如 洗衣 / coffee" autocomplete="off" aria-label="搜索图标"></label>
+    <div class="emoji-gallery" id="emojiGallery">${sections}<p class="emoji-empty" id="emojiEmpty" hidden>没有找到图标，可以自定义输入。</p></div>
+    <label class="emoji-custom-label" for="emojiCustom">自定义 Emoji <span>使用 iPhone 表情键盘</span></label>
+    <input id="emojiCustom" class="emoji-custom-input" type="text" maxlength="24" autocomplete="off" inputmode="text" value="${escAttr(chosen)}" placeholder="输入或粘贴一个 Emoji">
+    <input type="hidden" id="emojiInput" name="emoji" value="${escAttr(chosen)}">
+  </div>`;
+}
+function filterEmojiPicker() {
+  const tool=document.getElementById('emojiTool');if(!tool)return;
+  const query=document.getElementById('emojiSearch').value.toLocaleLowerCase().trim();
+  let matches=0;
+  tool.querySelectorAll('.emoji-section').forEach(section=>{
+    const group=section.dataset.iconGroup;
+    const groupAllowed=query?true:tool.dataset.category===group;
+    let localMatches=0;
+    section.querySelectorAll('.emoji-option').forEach(option=>{
+      const match=groupAllowed && (!query || option.dataset.iconSearch.includes(query));
+      option.hidden=!match;
+      if(match)localMatches++;
+    });
+    section.hidden=!localMatches;
+    matches+=localMatches;
+  });
+  tool.querySelector('#emojiEmpty').hidden=matches!==0;
+  // Searching shows matching icons from all categories.
+}
+function chooseEmoji(value) {
+  const tool=document.getElementById('emojiTool');if(!tool)return;
+  const selected=String(value||'').trim();if(!selected)return;
+  const grapheme=typeof Intl.Segmenter==='function'?[...new Intl.Segmenter(undefined,{granularity:'grapheme'}).segment(selected)][0]?.segment:[...selected][0];
+  if(!grapheme)return;
+  const emoji=grapheme.slice(0,12);
+  tool.querySelector('#emojiSelected').textContent=emoji;
+  tool.querySelector('#emojiInput').value=emoji;
+  tool.querySelector('#emojiCustom').value=emoji;
+  tool.querySelectorAll('.emoji-option').forEach(button=>{
+    const selected=button.dataset.emoji===emoji;
+    button.classList.toggle('selected',selected);button.setAttribute('aria-pressed',String(selected));
+  });
+}
 function editActivityModal(id) {
   if(!ensureEditable())return;
   const a=activityById(id);const editing=!!a;
-  openModal(editing?'编辑事项':'新增事项',`<div class="field"><label for="activityName">名称</label><input id="activityName" name="name" maxlength="45" required autocomplete="off" placeholder="例如：Laundry / 读书 / 洗车" value="${editing?escAttr(a.name):''}"></div><div class="field"><label>选择一个图标</label>${emojiOptions(editing?a.emoji:'🧺')}</div>`,async data=>{
+  openModal(editing?'编辑事项':'新增事项',`<div class="field"><label for="activityName">名称</label><input id="activityName" name="name" maxlength="45" required autocomplete="off" placeholder="例如：Laundry / 读书 / 洗车" value="${editing?escAttr(a.name):''}"></div><div class="field">${emojiOptions(editing?a.emoji:'🧺')}</div>`,async data=>{
     const name=String(data.get('name')||'').trim();const emoji=String(data.get('emoji')||'🧺');
     if(!name)throw new Error('请输入事项名称');
     if(state.activities.some(item=>item.name.toLowerCase()===name.toLowerCase()&&item.id!==id))throw new Error('已有同名事项');
     if(editing){a.name=name;a.emoji=emoji;}else{state.activities.push({id:makeId(),name,emoji,order:Math.max(-1,...state.activities.map(x=>x.order))+1,archived:false,createdAt:new Date().toISOString()});}
     dismissModal();render();await persist();toast(editing?'事项已更新':'事项已添加，可以立即记录');
   },{focus:'activityName',submitText:editing?'保存修改':'添加事项'});
+  filterEmojiPicker();
 }
 function backfillModal(id) {
   if(!ensureEditable())return;
@@ -204,7 +307,12 @@ function editLogModal(id) {
 function activityDetailModal(id) {
   const a=activityById(id);if(!a)return;
   const entries=entriesByActivity(id);
-  openModal(a.name,`<div class="metric-grid" style="margin-bottom:20px"><div class="metric-tile"><div class="metric-value">${periodCount(id,30)}</div><div class="metric-caption">近 30 天次数</div></div><div class="metric-tile"><div class="metric-value">${formatDuration(medianInterval(id))}</div><div class="metric-caption">典型记录间隔（中位数）</div></div><div class="metric-tile"><div class="metric-value">${entries.length}</div><div class="metric-caption">累计次数</div></div><div class="metric-tile"><div class="metric-value">${entries.length?since(entries[0].occurredAt):'—'}</div><div class="metric-caption">距上次记录</div></div></div><p class="tiny-notice">间隔根据不同记录日期计算。没有记录不代表没有发生。</p>`,async()=>dismissModal(),{submitText:'关闭'});
+  const lastItems=entries.slice(0,8).map(l=>`<div class="detail-date"><span>${dateLong(l.occurredAt)}</span><span>${dateKey(l.occurredAt)!==dateKey(l.recordedAt)?'补记':''}</span></div>`).join('');
+  openModal(a.name,`<div class="detail-frequency"><small>频率</small><strong>${frequencyLabel(frequencyDays(id))}</strong></div>
+    <div class="insight-metrics detail-metrics"><div><strong>${periodCount(id,7)}</strong><small>近 7 天</small></div><div><strong>${periodCount(id,30)}</strong><small>近 30 天</small></div><div><strong>${entries.length}</strong><small>累计</small></div></div>
+    <h3 class="detail-section-title">最近记录</h3>
+    ${lastItems?`<div class="detail-dates">${lastItems}</div>`:`<p class="tiny-notice">暂无记录</p>`}
+    <p class="tiny-notice" style="margin-top:14px">频率根据历史相邻记录的时间间隔估算。</p>`,async()=>dismissModal(),{submitText:'关闭'});
 }
 async function deleteActivity(id) {
   if(!ensureEditable())return;
@@ -276,9 +384,21 @@ document.addEventListener('click',async event=>{
 });
 
 document.addEventListener('click',event=>{
-  const b=event.target.closest('[data-emoji]');if(!b)return;
-  modalRoot.querySelectorAll('[data-emoji]').forEach(el=>{el.classList.remove('selected');el.setAttribute('aria-pressed','false');});
-  b.classList.add('selected');b.setAttribute('aria-pressed','true');document.getElementById('emojiInput').value=b.dataset.emoji;
+  const cat=event.target.closest('[data-icon-category]');
+  if(cat){
+    const tool=document.getElementById('emojiTool');if(!tool)return;
+    tool.dataset.category=cat.dataset.iconCategory;
+    tool.querySelectorAll('[data-icon-category]').forEach(b=>{
+      b.classList.toggle('active',b===cat);b.setAttribute('aria-pressed',String(b===cat));
+    });
+    tool.querySelector('#emojiSearch').value='';filterEmojiPicker();return;
+  }
+  const button=event.target.closest('[data-emoji]');
+  if(button){chooseEmoji(button.dataset.emoji);}
+});
+document.addEventListener('input',event=>{
+  if(event.target.id==='emojiSearch') filterEmojiPicker();
+  if(event.target.id==='emojiCustom' && event.target.value.trim()) chooseEmoji(event.target.value);
 });
 document.addEventListener('input',event=>{
   if(event.target.id!=='activitySearch')return;
@@ -293,7 +413,7 @@ async function init(){
     console.error('IndexedDB unavailable',err);app.innerHTML=`<div class="empty-state"><strong>无法使用本地存储</strong><p>Routine 需要 iPhone 浏览器的 IndexedDB 保存记录。请关闭无痕浏览，检查 Safari 网站数据设置，然后重新打开页面。<br>${escapeHTML(err.message)}</p></div>`;nav.style.display='none';return;
   }
   const desired=location.hash.slice(1);currentPage=['home','insights','history','settings'].includes(desired)?desired:'home';render();
-  if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(err=>console.warn('Offline cache unavailable',err));
+  if(!PREVIEW && 'serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(err=>console.warn('Offline cache unavailable',err));
   navigator.storage?.persist?.().catch(()=>{});
 }
 init();
