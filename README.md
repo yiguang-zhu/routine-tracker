@@ -1,13 +1,13 @@
-# Routine v2
+# Routine v2.1
 
 A quiet, mobile-first PWA for observing the frequency of everyday activities. No cloud account, external JavaScript, analytics, or backend. Designed for iPhone, with a read-only desktop backup viewer.
 
 ## Features
 
 - **One-tap logging:** Tap an activity to record it immediately. Undo is available.
-- **Easy customization:** Add/rename/archive/delete activities, with optional emoji symbols.
+- **Easy customization:** Add/rename/archive/delete activities, with a searchable, categorized emoji library and custom emoji input.
 - **Backfill:** Add past events with the actual occurrence date; edit or delete history.
-- **Insights:** 7-day and 30-day counts, eight-week trend, and median interval between distinct activity dates.
+- **Insights:** 7-day and 30-day counts, per-activity stats (7-day, 30-day, all-time) and approximate frequency in days/event.
 - **Device-local data:** Records are stored in IndexedDB, never sent to a server.
 - **Backups:** JSON export and restore, CSV export. In-app backup reminder after 10 records or 7 days with ≥3 records, then every 30 days after an export. Reminders only appear while the app is open.
 - **Desktop viewing:** On the iPhone export JSON to iCloud Drive; on a computer open the same site and select **Settings → View backup (read-only)**. The snapshot is stored locally in that computer's browser. Later phone activity does not sync automatically; import a new JSON backup to refresh.
@@ -41,3 +41,7 @@ An installed web app can lose locally stored data when site data is cleared, the
 ## Data format
 
 One IndexedDB record holds the local state: `activities`, `logs`, and `meta`. Each log includes both `occurredAt` (when the activity happened) and `recordedAt` (when entered). Backups include `app: "routine-tracker"` and `version: 2` for validation.
+
+## V2.1 preview
+
+The mobile preview runs under a separate IndexedDB database and uses example logs; it does not modify the live site or real local data. Production update can be merged only after review. The installed PWA normally updates on reopening/reloading and does not need reinstallation; never delete the installed app just to get an update, because local data can be lost.
