@@ -1,0 +1,32 @@
+name: Package approved icon
+on:
+  push:
+    branches: [build/approved-green-icon]
+    paths:
+      - assets/approved-green-ring-source.webp
+      - tools/build_approved_icon.py
+      - .github/workflows/package-approved-icon.yml
+permissions:
+  contents: write
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build and validate icon assets
+        run: |
+          python -m pip install --disable-pip-version-check Pillow==11.3.0
+          python tools/build_approved_icon.py
+          node --check app.js
+          node --check storage.js
+          node --check sw.js
+      - name: Commit generated assets to build branch only
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/*.png apple-touch-icon.png favicon.ico index.html manifest.webmanifest sw.js
+          git commit -m 'Package approved green ring icon assets'
+          git push origin HEAD:build/approved-green-icon
