@@ -1,8 +1,8 @@
-const CACHE_NAME = 'routine-v2-shell-2026-11-09-r1';
+const CACHE_NAME = 'routine-v2-shell-2026-11-09-r2-green-icon';
 const SHELL = [
   './', './index.html', './styles.css', './app.js', './storage.js',
-  './manifest.webmanifest', './assets/icon.svg', './assets/icon-192.png',
-  './assets/icon-512.png', './assets/apple-touch-icon.png',
+  './manifest.webmanifest', './assets/favicon-green-ring.png', './assets/icon-green-ring-192.png',
+  './assets/icon-green-ring-512.png', './assets/apple-touch-icon-green-ring.png',
 ];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting()));
