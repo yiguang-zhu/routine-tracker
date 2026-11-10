@@ -1,6 +1,6 @@
-const CACHE_NAME = 'routine-v2-shell-2026-11-09-r2-green-icon';
+const CACHE_NAME = 'routine-v2-shell-2026-11-10-r3-frequency';
 const SHELL = [
-  './', './index.html', './styles.css', './app.js', './storage.js',
+  './', './index.html', './styles.css?v=2.2.0', './app.js?v=2.2.0', './storage.js', './metrics.js',
   './manifest.webmanifest', './assets/favicon-green-ring.png', './assets/icon-green-ring-192.png',
   './assets/icon-green-ring-512.png', './assets/apple-touch-icon-green-ring.png',
 ];

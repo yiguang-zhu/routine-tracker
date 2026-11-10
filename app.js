@@ -1,4 +1,5 @@
 import { initialState, makeId, parseBackup, readLocal, toBackup, writeLocal } from './storage.js';
+import { activityFrequency, createTapGuard } from './metrics.js';
 
 const app = document.getElementById('app');
 const modalRoot = document.getElementById('modalRoot');
@@ -71,6 +72,9 @@ let lastUndoId = null;
 let toastTimer = 0;
 let importMode = 'view';
 let saveChain = Promise.resolve();
+const acceptQuickTap = createTapGuard();
+const frequencyUnits = new Map();
+let renderedDay;
 
 function icon(name) { return `<svg aria-hidden="true"><use href="#i-${name}"></use></svg>`; }
 function escapeHTML(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
@@ -92,19 +96,11 @@ function iconFor(a) { return escapeHTML(a?.emoji || '✦'); }
 function allSortedLogs() { return [...state.logs].sort((a,b)=>b.occurredAt.localeCompare(a.occurredAt)); }
 function inLastDays(iso, days) { const n=dayDiff(dateKey(iso)); return n>=0 && n<days; }
 function periodCount(id, days) { return state.logs.filter(l=>(!id || l.activityId===id) && inLastDays(l.occurredAt, days)).length; }
-function median(values) { if(!values.length) return null; const a=[...values].sort((x,y)=>x-y); const mid=Math.floor(a.length/2); return a.length%2?a[mid]:(a[mid-1]+a[mid])/2; }
-function frequencyDays(id) {
-  // Median time between consecutive events, including multiple events on one day.
-  const times=entriesByActivity(id).map(l=>Date.parse(l.occurredAt)).sort((a,b)=>a-b);
-  if(times.length<2) return null;
-  const gaps=times.slice(1).map((t,i)=>(t-times[i])/DAY);
-  return median(gaps);
-}
-function frequencyLabel(value) {
-  if(value===null || !Number.isFinite(value)) return '—';
-  if(value<1) return '<1 天/次';
-  const rounded=Math.round(value*10)/10;
-  return `${Number.isInteger(rounded)?rounded:rounded.toFixed(1)} 天/次`;
+function frequencyFor(a) {
+  const result = activityFrequency(a, state.logs, new Date(), frequencyUnits.get(a.id));
+  if (result.unit) frequencyUnits.set(a.id, result.unit);
+  else frequencyUnits.delete(a.id);
+  return result;
 }
 function emptyBlock(title, description, action='') { return `<div class="empty-state"><strong>${title}</strong><p>${description}</p>${action}</div>`; }
 function viewerBanner() {
@@ -129,7 +125,7 @@ function homePage() {
     return `<div class="activity-card" data-name="${escAttr(a.name.toLowerCase())}">
       <button class="activity-main" data-action="log" data-id="${escAttr(a.id)}" ${isViewer()?'disabled':''} aria-label="记录 ${escAttr(a.name)}">
         <span class="activity-symbol" aria-hidden="true">${iconFor(a)}</span><span class="activity-name">${escapeHTML(a.name)}</span>
-      </button><div class="activity-bottom"><span class="activity-last">${recent?'上次 · '+since(recent.occurredAt):'点按开始记录'}</span>
+      </button><div class="activity-bottom"><span class="activity-status"><span class="activity-today">今日 ${periodCount(a.id,1)} 次</span><span class="activity-last">${recent?'上次 · <span class="activity-last-value">'+since(recent.occurredAt)+'</span>':'点按开始记录'}</span></span>
       ${isViewer()?'':`<button class="activity-backfill" data-action="backfill" data-id="${escAttr(a.id)}" aria-label="补记 ${escAttr(a.name)}">补记</button>`}</div></div>`;
   }).join('');
   const addCard=isViewer()?'':`<button class="activity-card activity-add" data-action="add"><span class="plus-bubble">${icon('plus')}</span><span>新增事项</span></button>`;
@@ -149,12 +145,14 @@ function entryRow(l,editable=true) {
   ${editable && !isViewer()?`<button class="row-button" data-action="edit-log" data-id="${escAttr(l.id)}" aria-label="编辑记录">${icon('edit')}</button>`:`<div class="row-trailing">${dateShort(l.occurredAt)}</div>`}</div>`;
 }
 function insightsPage() {
-  const items=active().map(a=>({a,thirty:periodCount(a.id,30),seven:periodCount(a.id,7),all:entriesByActivity(a.id).length,freq:frequencyDays(a.id),last:lastEntry(a.id)}));
+  const items=active().map(a=>({a,thirty:periodCount(a.id,30),seven:periodCount(a.id,7),all:entriesByActivity(a.id).length,freq:frequencyFor(a),last:lastEntry(a.id)}));
   return `${viewerBanner()}<div class="page-heading"><div><p class="eyebrow">Insights</p><h1 class="page-title">活动统计</h1></div></div>
+  <p class="tiny-notice frequency-explanation">频率根据近 30 天记录估算，月按 30 天折算；不足 30 天时按实际观察天数计算。</p>
   <div class="insights-grid">${items.map(({a,thirty,seven,all,freq,last})=>`
     <button class="insight-card" data-action="activity-detail" data-id="${escAttr(a.id)}" aria-label="查看${escAttr(a.name)}的记录详情">
       <div class="insight-card-top"><span class="row-icon" aria-hidden="true">${iconFor(a)}</span><span class="insight-card-title">${escapeHTML(a.name)}<small>${last?`上次 · ${since(last.occurredAt)}`:'暂无记录'}</small></span>${icon('chevron-right')}</div>
-      <div class="insight-frequency"><span class="insight-frequency-label">频率</span><strong>${frequencyLabel(freq)}</strong></div>
+      <div class="insight-frequency"><span class="insight-frequency-label">频率</span><strong>${freq.label}</strong></div>
+      ${freq.note?`<p class="frequency-note">${freq.note}</p>`:''}
       <div class="insight-metrics"><div><strong>${seven}</strong><small>近 7 天</small></div><div><strong>${thirty}</strong><small>近 30 天</small></div><div><strong>${all}</strong><small>累计</small></div></div>
     </button>`).join('')}</div>
   ${items.length?'':emptyBlock('还没有统计数据','添加事项后，就能在这里查看每项活动的频率。')}`;
@@ -178,7 +176,7 @@ function settingsPage() {
   <section class="setting-section"><h2>隐私与设备</h2><div class="setting-content"><div class="split-label"><strong>${icon('shield')} 无账户 · 无云端</strong></div><p>不需要登录、不上传你的记录。浏览器或 iOS 清理网站数据、删除 App 等操作可能导致记录丢失，请把备份文件保存到 iCloud Drive。</p>
   <div class="setting-button-stack"><button class="button button-danger" data-action="reset">${icon('trash')} 清除这台设备的数据</button></div></div></section>
   <section class="setting-section"><h2>安装到 iPhone</h2><div class="setting-content"><strong>像 App 一样使用</strong><p>在 Safari 中打开此网站，点「分享」→「添加到主屏幕」，开启「作为 Web App 打开」。以后从桌面图标启动。</p></div></section>
-  <p class="footer-note">Routine v2.1</p>`;
+  <p class="footer-note">Routine v2.2</p>`;
 }
 function managePage() {
   return `<div class="view-heading"><button class="back-btn" data-nav="settings" aria-label="返回设置">${icon('arrow-left')}</button><h1>管理事项</h1></div>
@@ -191,11 +189,17 @@ function navigate(name) {
 }
 function render() {
   if(!state) return;
+  const search=document.getElementById('activitySearch')?.value || '';
   app.innerHTML = (PREVIEW?`<div class="preview-banner"><span>预览版 2.1</span>演示数据与正式版完全分开，不影响你的记录。</div>`:'') + ({home:homePage, insights:insightsPage,history:historyPage,settings:settingsPage,manage:managePage}[currentPage] || homePage)();
   nav.querySelectorAll('[data-nav]').forEach(b=>b.classList.toggle('active',b.dataset.nav===currentPage));
   const pill=document.querySelector('.local-pill');
   if(pill) pill.innerHTML=`<span class="local-indicator"></span>${PREVIEW?'预览模式':isViewer()?'只读备份':'本地存储'}`;
   if (currentPage==='manage') nav.style.display='none'; else nav.style.display='';
+  if (currentPage==='home' && search) {
+    document.getElementById('activitySearch').value=search;
+    filterActivities(search);
+  }
+  renderedDay=todayKey();
 }
 function toast(message, action, callback) {
   clearTimeout(toastTimer);
@@ -221,7 +225,13 @@ function openModal(title,contents,onSubmit, options={}) {
   modalRoot.innerHTML=`<div class="modal-scrim" data-dismiss="true"><div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-handle"></div><div class="modal-header"><h2 id="modalTitle">${escapeHTML(title)}</h2><button class="icon-button" type="button" data-action="close-modal" aria-label="关闭">${icon('close')}</button></div><form id="modalForm">${contents}<div class="modal-footer">${options.extraButton||''}<button class="button button-primary" type="submit">${escapeHTML(options.submitText||'保存')}</button></div></form></div></div>`;
   document.body.style.overflow='hidden';
   const form=document.getElementById('modalForm');
-  form.addEventListener('submit',async e=>{e.preventDefault();try{await onSubmit(new FormData(form));}catch(err){toast(err.message||'操作失败');}});
+  let submitting=false;
+  form.addEventListener('submit',async e=>{
+    e.preventDefault();if(submitting)return;submitting=true;
+    const submit=form.querySelector('[type="submit"]');submit.disabled=true;
+    try{await onSubmit(new FormData(form));}catch(err){toast(err.message||'操作失败');}
+    finally{submitting=false;submit.disabled=false;}
+  });
   modalRoot.querySelector('.modal-scrim').addEventListener('click',e=>{if(e.target.classList.contains('modal-scrim'))dismissModal();});
   if(options.focus) setTimeout(()=>document.getElementById(options.focus)?.focus(),90);
 }
@@ -307,12 +317,14 @@ function editLogModal(id) {
 function activityDetailModal(id) {
   const a=activityById(id);if(!a)return;
   const entries=entriesByActivity(id);
+  const frequency=frequencyFor(a);
   const lastItems=entries.slice(0,8).map(l=>`<div class="detail-date"><span>${dateLong(l.occurredAt)}</span><span>${dateKey(l.occurredAt)!==dateKey(l.recordedAt)?'补记':''}</span></div>`).join('');
-  openModal(a.name,`<div class="detail-frequency"><small>频率</small><strong>${frequencyLabel(frequencyDays(id))}</strong></div>
+  openModal(a.name,`<div class="detail-frequency"><small>频率</small><strong>${frequency.label}</strong></div>
+    ${frequency.note?`<p class="frequency-note">${frequency.note}</p>`:''}
     <div class="insight-metrics detail-metrics"><div><strong>${periodCount(id,7)}</strong><small>近 7 天</small></div><div><strong>${periodCount(id,30)}</strong><small>近 30 天</small></div><div><strong>${entries.length}</strong><small>累计</small></div></div>
     <h3 class="detail-section-title">最近记录</h3>
     ${lastItems?`<div class="detail-dates">${lastItems}</div>`:`<p class="tiny-notice">暂无记录</p>`}
-    <p class="tiny-notice" style="margin-top:14px">频率根据历史相邻记录的时间间隔估算。</p>`,async()=>dismissModal(),{submitText:'关闭'});
+    <p class="tiny-notice" style="margin-top:14px">频率根据近 30 天内已观察时段的记录估算，月按 30 天折算。至少观察 7 天，且在不同日期有至少 2 条记录后显示；漏记会使估算偏低。开始观察前的补记保留在次数和历史中，不用于推算频率。</p>`,async()=>dismissModal(),{submitText:'关闭'});
 }
 async function deleteActivity(id) {
   if(!ensureEditable())return;
@@ -352,7 +364,7 @@ async function importBackup(event){
       if(!confirm(`以只读方式查看 ${backup.activities.length} 个事项、${backup.logs.length} 条记录？\n\n这会替换本设备现有的本地数据（如有）。iPhone 上的原始数据不受影响。`))return;
       backup.meta.readOnly=true;backup.meta.importedAt=new Date().toISOString();
     }
-    state=backup;currentPage=importMode==='view'?'insights':'home';render();await persist();toast(importMode==='view'?'只读备份已载入':'数据已恢复');
+    state=backup;frequencyUnits.clear();currentPage=importMode==='view'?'insights':'home';render();await persist();toast(importMode==='view'?'只读备份已载入':'数据已恢复');
   }catch(e){console.error(e);alert(`无法导入备份：${e.message}`);}
 }
 function snoozeBackup(){state.meta.reminderSnoozedUntil=new Date(Date.now()+7*DAY).toISOString();render();persist();}
@@ -363,7 +375,7 @@ document.addEventListener('click',async event=>{
   const action=target.dataset.action;if(!action)return;
   const id=target.dataset.id;
   switch(action){
-    case 'log':await logActivity(id);break;
+    case 'log':if(ensureEditable() && acceptQuickTap(id))await logActivity(id);break;
     case 'add':editActivityModal();break;
     case 'rename':editActivityModal(id);break;
     case 'backfill':backfillModal(id);break;
@@ -400,11 +412,19 @@ document.addEventListener('input',event=>{
   if(event.target.id==='emojiSearch') filterEmojiPicker();
   if(event.target.id==='emojiCustom' && event.target.value.trim()) chooseEmoji(event.target.value);
 });
-document.addEventListener('input',event=>{
-  if(event.target.id!=='activitySearch')return;
-  const query=event.target.value.toLocaleLowerCase().trim();
+function filterActivities(value) {
+  const query=value.toLocaleLowerCase().trim();
   document.querySelectorAll('#activityGrid .activity-card[data-name]').forEach(card=>{card.hidden=!card.dataset.name.includes(query);});
+}
+document.addEventListener('input',event=>{
+  if(event.target.id==='activitySearch')filterActivities(event.target.value);
 });
+function refreshDay() {
+  if(state && !document.hidden && !modalRoot.innerHTML && renderedDay!==todayKey())render();
+}
+document.addEventListener('visibilitychange',refreshDay);
+window.addEventListener('focus',refreshDay);
+setInterval(refreshDay,60000);
 importFile.addEventListener('change',importBackup);
 document.addEventListener('keydown',event=>{if(event.key==='Escape')dismissModal();});
 window.addEventListener('hashchange',()=>{if(!modalRoot.innerHTML && ['home','insights','history','settings'].includes(location.hash.slice(1)))navigate(location.hash.slice(1));});
